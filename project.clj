@@ -1,5 +1,5 @@
 (defproject word-task "0.1.0-SNAPSHOT"
-  :description "Word exercise"
+  :description "ClojureScript Word Exercise"
   :license {:name "Eclipse Public License"
             :url "http://www.eclipse.org/legal/epl-v10.html"}
 
