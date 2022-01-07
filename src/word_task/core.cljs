@@ -8,7 +8,7 @@
 (defn target-value [event] (.. event -target -value))
 (defn input-value [input-id] (.-value (js/document.getElementById input-id)))
 
-;; App state
+;; State management
 (def default-text  "What {are} you doing?")
 
 (def state
@@ -17,8 +17,6 @@
     :task-parts '()
     :answers {}}))
 
-
-;; Selectors
 (defn- selector [state path]
   (rum/cursor-in state path))
 
@@ -26,13 +24,7 @@
 (def task-parts (selector state [:task-parts]))
 (def answers (selector state [:answers]))
 
-
-;; App
-(rum/defc layout [& children]
-  [:div.layout
-   (for [child children] [:div.column {:key (gensym)} child])])
-
-(defn parse-template [text]
+(defn- parse-template [text]
   (def pattern #"(?i)(\{\w+\})")
 
   (def chunks (clojure.string/split text pattern))
@@ -47,7 +39,19 @@
 (defn save-task [text]
   (swap! state assoc :task-parts (parse-template text)))
 
-(rum/defc editor [state task-value]
+(defn save-answer [uuid correct-answer value]
+  (swap! state assoc-in [:answers uuid]
+         {:value value
+          :status (if (= value correct-answer) "correct" "wrong")}))
+
+
+;; Components
+(rum/defc layout [& children]
+  [:div.layout
+   (for [child children] [:div.column {:key (gensym)} child])])
+
+
+(rum/defc editor [task-value]
   [:div
    [:h2 "Editor"]
    [:form
@@ -61,11 +65,6 @@
      {:type "button"
       :on-click #(save-task (input-value "task-text"))}
      "Save"]]])
-
-(defn save-answer [uuid correct-answer value]
-  (swap! state assoc-in [:answers uuid]
-         {:value value
-          :status (if (= value correct-answer) "correct" "wrong")}))
 
 (rum/defc input [answer uuid status]
   [:input.task-input
@@ -93,12 +92,12 @@
    (task parts)
    (answers-list)])
 
-(rum/defc app < rum/reactive [state]
+(rum/defc app < rum/reactive []
   (layout
-   (editor state (rum/react task-value))
+   (editor (rum/react task-value))
    (preview (rum/react task-parts))))
 
 (rum/mount
- (app state)
+ (app)
  (js/document.getElementById "app"))
 
