@@ -8,23 +8,24 @@
 (defn target-value [event] (.. event -target -value))
 (defn input-value [input-id] (.-value (js/document.getElementById input-id)))
 
-
 ;; State management
 
-
 (def default-state
-  {:task-value "What {{ are | the hell are }} you doing? Where {{ have }} you been?"
+  {:task-text "What {{ are | the hell are }} you doing? Where {{ have }} you been?"
    :task-parts nil
    :answers {}})
 
 (def state (atom default-state))
 
-(defn- selector [state path]
-  (rum/cursor-in state path))
+(defn- cursor [path] (rum/cursor-in state path))
+(def task-text (cursor [:task-text]))
+(def task-parts (cursor [:task-parts]))
+(def answers (cursor [:answers]))
 
-(def task-value (selector state [:task-value]))
-(def task-parts (selector state [:task-parts]))
-(def answers (selector state [:answers]))
+(defn select-correct-answers [uuid]
+  (let [task-parts (:task-parts @state)]
+    (filter #(= uuid (:uuid %)) task-parts)
+    (reduce #(into %1 (get-in %2 [:props :answers])) #{} task-parts)))
 
 (defn- split-into-chunks [text]
   (str/split text #"(?i)(\{\{.*?\}\})"))
@@ -47,12 +48,13 @@
                 {:value chunk})})))
 
 (defn save-task [text]
-  (swap! state assoc :task-parts (parse-template text) :task-value text))
+  (swap! state assoc :task-parts (parse-template text) :task-text text))
 
-(defn save-answer [uuid correct-answers value]
-  (swap! state assoc-in [:answers uuid]
-         {:value value
-          :status (if (contains? correct-answers value) "correct" "wrong")}))
+(defn save-answer [uuid value]
+  (let [correct-answers (select-correct-answers uuid)]
+    (swap! state assoc-in [:answers uuid]
+           {:value value
+            :status (if (contains? correct-answers value) "correct" "wrong")})))
 
 
 ;; Components
@@ -62,7 +64,7 @@
   [:div.layout
    (for [child children] [:div.column {:key (gensym)} child])])
 
-(rum/defc editor [task-value]
+(rum/defc editor [task-text]
   [:div
    [:h2 "Editor"]
    [:form
@@ -70,18 +72,18 @@
                 :name "task-text"
                 :cols 40
                 :id "task-text"
-                :default-value task-value}]
+                :default-value task-text}]
     [:br]
     [:button {:type "button"
               :on-click #(save-task (input-value "task-text"))}
      "Save"]]])
 
-(rum/defc input [uuid correct-answers status]
+(rum/defc input [uuid status size]
   [:input.task-input
    {:type "text"
-    :size (apply max (map count correct-answers))
+    :size size
     :class status
-    :on-blur #(save-answer uuid correct-answers (target-value %))}])
+    :on-blur #(save-answer uuid (target-value %))}])
 
 (rum/defc task < rum/reactive [parts]
   (let [answers (rum/react answers)]
@@ -90,8 +92,8 @@
        (case (:type part)
          "input" (input
                   (:uuid part)
-                  (:answers (:props part))
-                  (:status (get answers (:uuid part))))
+                  (:status (get answers (:uuid part)))
+                  (apply max (map count (:answers (:props part)))))
          "text" (:value (:props part)))])))
 
 ;; (rum/defc answers-list < rum/reactive []
@@ -107,7 +109,7 @@
 
 (rum/defc app < rum/reactive []
   (layout
-   (editor (rum/react task-value))
+   (editor (rum/react task-text))
    (preview (rum/react task-parts))))
 
 (rum/mount
