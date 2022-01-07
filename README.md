@@ -1,6 +1,6 @@
-# word-task
+# Word-task
 
-## Run in dev mode 
+### Run demo
 
 ```sh
 lein figwheel
