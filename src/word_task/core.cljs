@@ -1,16 +1,18 @@
 (ns word-task.core
   (:require [rum.core :as rum]
             [word-task.dom :refer [target-value input-value]]
-            [word-task.template :refer [parse-template]]
-            ))
+            [word-task.template :refer [parse-template]]))
 
 (enable-console-print!)
 
 ;;; STATE
 
+(def default-task-text
+  "What {{ are | the hell are }} you doing? Where {{ have }} you been?")
+
 (def default-state
-  {:task-text "What {{ are | the hell are }} you doing? Where {{ have }} you been?"
-   :task-parts nil
+  {:task-text default-task-text
+   :task-parts (parse-template default-task-text)
    :answers {}})
 
 (def state (atom default-state))
@@ -39,45 +41,60 @@
 
 ;;; UI
 
+(rum/defc heading [text]
+  [:h2 {:class "text-3xl font-medium mb-4"} text])
+
 (rum/defc layout [& children]
-  [:div.layout
-   (for [child children] [:div.column {:key (gensym)} child])])
+  [:div {:class "grid grid-cols-2 gap-x-3 w-9/12"}
+   (for [child children] [:div {:class "p-4 shadow-md bg-white" :key (gensym)} child])])
 
 (rum/defc editor [task-text]
   [:div
-   [:h2 "Editor"]
+   (heading "Editor")
    [:form
-    [:textarea {:auto-focus true
-                :name "task-text"
-                :cols 40
+    [:textarea {:name "task-text"
                 :id "task-text"
-                :default-value task-text}]
-    [:br]
+                :rows 10
+                :default-value task-text
+                :class "resize-none w-full p-2 border-2 border-gray-300 caret-pink-500
+                        focus:outline-none focus:border-pink-300
+                        text-gray-900"}]
     [:button {:type "button"
+              :class "border-2 border-gray-300 font-semibold hover:bg-gray-100
+                      hover:border-gray-400 hover:text-gray-900 px-4 py-2 text-gray-600 transition-colors"
               :on-click #(save-task (input-value "task-text"))}
      "Save"]]])
 
 (rum/defc input [uuid status size]
-  [:input.task-input
+  [:input
    {:type "text"
     :size size
-    :class status
+    :class (str
+            (case status
+              "correct" "border-lime-500"
+              "wrong" "border-rose-500"
+              "border-gray-300")
+            " "
+            "border-2 border-gray-300 rounded-none
+            focus:outline-none focus:border-pink-300
+            px-2 caret-pink-500")
     :on-blur #(save-answer uuid (target-value %))}])
 
 (rum/defc task < rum/reactive [parts]
-  (let [answers (rum/react answers)]
-    (for [part parts]
-      [:span {:key (:uuid part)}
-       (case (:type part)
-         "input" (input
-                  (:uuid part)
-                  (:status (get answers (:uuid part)))
-                  (apply max (map count (:answers (:props part)))))
-         "text" (:value (:props part)))])))
+  [:div {:class "p-2"}
+   (let [answers (rum/react answers)]
+     (for [part parts]
+       [:span {:key (:uuid part)}
+        (case (:type part)
+          "input" (input
+                   (:uuid part)
+                   (:status (get answers (:uuid part)))
+                   (apply max (map count (:answers (:props part)))))
+          "text" (:value (:props part)))]))])
 
 (rum/defc preview [parts]
   [:div
-   [:h2 "Preview"]
+   (heading "Preview")
    (task parts)])
 
 (rum/defc app < rum/reactive []
