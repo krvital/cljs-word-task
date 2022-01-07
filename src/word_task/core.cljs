@@ -8,6 +8,7 @@
 (defn target-value [event] (.. event -target -value))
 (defn input-value [input-id] (.-value (js/document.getElementById input-id)))
 
+
 ;; State management
 (def default-text  "What {are} you doing?")
 
@@ -50,7 +51,6 @@
   [:div.layout
    (for [child children] [:div.column {:key (gensym)} child])])
 
-
 (rum/defc editor [task-value]
   [:div
    [:h2 "Editor"]
@@ -73,12 +73,16 @@
     :class status
     :on-blur #(save-answer uuid answer (target-value %))}])
 
-(rum/defc task [parts]
-  (for [part parts]
-    [:span {:key (:uuid (:props part))}
-     (case (:type part)
-       "input" (input (:answer (:props part)) (:uuid (:props part)) "init")
-       "text" (:value (:props part)))]))
+(rum/defc task < rum/reactive [parts]
+  (let [answers  (rum/react answers)]
+    (for [part parts]
+      [:span {:key (:uuid (:props part))}
+       (case (:type part)
+         "input" (input
+                  (:answer (:props part))
+                  (:uuid (:props part))
+                  (:status (get answers (:uuid (:props part)))))
+         "text" (:value (:props part)))])))
 
 (rum/defc answers-list < rum/reactive []
   (let [ans (vals (rum/react answers))]
@@ -89,8 +93,7 @@
 (rum/defc preview [parts]
   [:div
    [:h2 "Preview"]
-   (task parts)
-   (answers-list)])
+   (task parts)])
 
 (rum/defc app < rum/reactive []
   (layout
@@ -100,4 +103,3 @@
 (rum/mount
  (app)
  (js/document.getElementById "app"))
-
