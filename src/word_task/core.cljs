@@ -58,10 +58,10 @@
                 :default-value task-text
                 :class "resize-none w-full p-2 border-2 border-gray-300 caret-pink-500
                         focus:outline-none focus:border-pink-300
-                        text-gray-900"}]
+                        text-gray-900 transition-colors"}]
     [:button {:type "button"
               :class "border-2 border-gray-300 font-semibold hover:bg-gray-100
-                      hover:border-gray-400 hover:text-gray-900 px-4 py-2 text-gray-600 transition-colors"
+                      hover:border-pink-300 hover:text-gray-900 px-4 py-2 text-gray-600 transition-colors"
               :on-click #(save-task (input-value "task-text"))}
      "Save"]]])
 
@@ -77,7 +77,7 @@
             " "
             "border-2 border-gray-300 rounded-none
             focus:outline-none focus:border-pink-300
-            px-2 caret-pink-500")
+            px-2 caret-pink-500 transition-colors")
     :on-blur #(save-answer uuid (target-value %))}])
 
 (rum/defc task < rum/reactive [parts]
